@@ -12,6 +12,7 @@ register_activation_hook(__FILE__, 'wp_book_activate');
 function wp_book_activate() {
     wp_book_post_type_register();
     wp_book_hierarchical_taxonomy();
+    wp_book_non_hierarchical_taxonomy();
     flush_rewrite_rules();
 }
 
@@ -74,6 +75,38 @@ function wp_book_hierarchical_taxonomy(){
     );
 
     register_taxonomy('book_category', 'book', $args);
+}
+
+add_action('init', 'wp_book_non_hierarchical_taxonomy');
+
+function wp_book_non_hierarchical_taxonomy(){
+    $labels = array(
+        'name'              => 'Book Tags',
+        'singular_name'     => 'Book Tag',
+        'search_items'      => 'Search Book Tags',
+        'popular_items'              => 'Popular Book Tags',
+        'all_items'         => 'All Book Tags',
+        'edit_item'         => 'Edit Book Tag',
+        'update_item'       => 'Update Book Tag',
+        'add_new_item'      => 'Add New Book Tag',
+        'separate_items_with_commas' => 'Separate tags with commas',
+        'add_or_remove_items' => 'Add or remove tags',
+        'choose_from_most_used' => 'Choose from the most used tags',
+        'new_item_name'     => 'New Book Tag Name',
+        'menu_name'         => 'Book Tags',
+    );
+
+    $args = array(
+        'hierarchical'      => false,
+        'labels'            => $labels,
+        'show_in_rest'      => true,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'update_count_callback' => '_update_post_term_count',
+        'rewrite'           => array('slug' => 'book-tag'),
+    );
+
+    register_taxonomy('book_tag', 'book', $args);
 }
 
 
