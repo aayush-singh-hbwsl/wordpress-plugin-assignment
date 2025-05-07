@@ -31,3 +31,24 @@ function wp_book_post_type_register(){
 
     register_post_type('book', $args);
 }
+
+add_action('pre_get_posts', 'wp_book_modify_books_archive_query', 1);
+
+function wp_book_modify_books_archive_query($query) {
+    
+    if (
+        !is_admin() &&
+        $query->is_main_query() &&
+        is_post_type_archive('book')
+    ) {
+        // echo get_option('wp_book_per_page')  ;
+        echo get_option('posts_per_page')  ;
+        $per_page = get_option('wp_book_per_page', 10);
+
+        // echo $per_page;
+        // $query->set('posts_per_page', intval($per_page));
+        $query->set('posts_per_page', 1);
+        echo $query->get('posts_per_page');
+        echo get_option('posts_per_page')  ;
+    }
+}

@@ -13,6 +13,8 @@ require_once plugin_dir_path(__FILE__) . 'includes/post-types.php';
 require_once plugin_dir_path(__FILE__) . 'includes/taxonomies.php';
 require_once plugin_dir_path(__FILE__) . 'includes/meta-box.php';
 require_once plugin_dir_path(__FILE__) . 'includes/meta-table.php';
+require_once plugin_dir_path(__FILE__) . 'includes/admin-settings.php';
+require_once plugin_dir_path(__FILE__) . 'includes/book-shortcode.php';
 
 
 register_activation_hook(__FILE__, 'wp_book_activate');
