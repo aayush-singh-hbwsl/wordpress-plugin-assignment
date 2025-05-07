@@ -1,82 +1,102 @@
 <?php
 
-add_action('add_meta_boxes', 'wp_book_register_meta_box');
 
-function wp_book_register_meta_box() {
-    add_meta_box('wp_book_meta_box', 'Details for the Book', 'wp_book_render_meta_box', 'book', 'normal', 'high');
+add_action('add_meta_boxes', 'wp_book_add_meta_box');
+
+
+function wp_book_add_meta_box() {
+    add_meta_box(
+        'book_meta_box',        
+        'Book Details',         
+        'wp_book_meta_box_html',
+        'book',                 
+        'normal',               
+        'high'                  
+    );
 }
 
-function wp_book_render_meta_box($post){
-    wp_nonce_field('wp_book_save_meta_box', 'wp_book_meta_box_nonce');
+function wp_book_meta_box_html($post) {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'bookmeta';
+    
+    $book_data = $wpdb->get_row(
+        $wpdb->prepare("SELECT * FROM $table_name WHERE book_id = %d", $post->ID)
+    );
+    
+    $author = isset($book_data->author) ? $book_data->author : '';
+    $price = isset($book_data->price) ? $book_data->price : '';
+    $publisher = isset($book_data->publisher) ? $book_data->publisher : '';
 
-    $author    = get_post_meta($post->ID, '_book_author', true);
-    $price     = get_post_meta($post->ID, '_book_price', true);
-    $publisher = get_post_meta($post->ID, '_book_publisher', true);
-    $year      = get_post_meta($post->ID, '_book_year', true);
-    $edition   = get_post_meta($post->ID, '_book_edition', true);
-    $url       = get_post_meta($post->ID, '_book_url', true);
+    wp_nonce_field('wp_book_save_meta_box_data', 'wp_book_meta_box_nonce');
     ?>
-
-    <p><label>Author Name:</label><br>
-        <input type="text" name="book_author" value="<?php echo esc_attr($author); ?>" style="width:100%;">
+    <p>
+        <label for="book_author">Author:</label>
+        <input type="text" id="book_author" name="book_author" value="<?php echo esc_attr($author); ?>" class="widefat" />
     </p>
-
-    <p><label>Price:</label><br>
-        <input type="text" name="book_price" value="<?php echo esc_attr($price); ?>" style="width:100%;">
+    <p>
+        <label for="book_price">Price:</label>
+        <input type="text" id="book_price" name="book_price" value="<?php echo esc_attr($price); ?>" class="widefat" />
     </p>
-
-    <p><label>Publisher:</label><br>
-        <input type="text" name="book_publisher" value="<?php echo esc_attr($publisher); ?>" style="width:100%;">
+    <p>
+        <label for="book_publisher">Publisher:</label>
+        <input type="text" id="book_publisher" name="book_publisher" value="<?php echo esc_attr($publisher); ?>" class="widefat" />
     </p>
-
-    <p><label>Year:</label><br>
-        <input type="number" name="book_year" value="<?php echo esc_attr($year); ?>" style="width:100%;">
-    </p>
-
-    <p><label>Edition:</label><br>
-        <input type="text" name="book_edition" value="<?php echo esc_attr($edition); ?>" style="width:100%;">
-    </p>
-
-    <p><label>Book URL:</label><br>
-        <input type="url" name="book_url" value="<?php echo esc_attr($url); ?>" style="width:100%;">
-    </p>
-
     <?php
-
 }
 
-add_action('save_post', 'wp_book_save_meta_box');
+add_action('save_post', 'wp_book_save_meta_box_data');
 
-function wp_book_save_meta_box($post_id) {
-    if (!isset($_POST['wp_book_meta_box_nonce']) || !wp_verify_nonce($_POST['wp_book_meta_box_nonce'], 'wp_book_save_meta_box')) {
-        return;
+
+function wp_book_save_meta_box_data($post_id) {
+
+    if (!isset($_POST['wp_book_meta_box_nonce']) || !wp_verify_nonce($_POST['wp_book_meta_box_nonce'], 'wp_book_save_meta_box_data')) {
+        return $post_id;
     }
 
-    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
 
-    if (!current_user_can('edit_post', $post_id)) return;
-
-    if (isset($_POST['book_author'])) {
-        update_post_meta($post_id, '_book_author', sanitize_text_field($_POST['book_author']));
+    if ('book' !== get_post_type($post_id)) {
+        return $post_id;
     }
 
-    if (isset($_POST['book_price'])) {
-        update_post_meta($post_id, '_book_price', sanitize_text_field($_POST['book_price']));
+    if (isset($_POST['book_author']) && isset($_POST['book_price']) && isset($_POST['book_publisher'])) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'bookmeta';
+        
+
+        $author = sanitize_text_field($_POST['book_author']);
+        $price = sanitize_text_field($_POST['book_price']);
+        $publisher = sanitize_text_field($_POST['book_publisher']);
+
+        $existing_data = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM $table_name WHERE book_id = %d", $post_id)
+        );
+        
+        if ($existing_data) {
+            $wpdb->update(
+                $table_name,
+                array(
+                    'author' => $author,
+                    'price' => $price,
+                    'publisher' => $publisher
+                ),
+                array('book_id' => $post_id),
+                array('%s', '%s', '%s'),  
+                array('%d')                
+            );
+        } else {
+
+            $wpdb->insert(
+                $table_name,
+                array(
+                    'book_id'  => $post_id,
+                    'author'   => $author,
+                    'price'    => $price,
+                    'publisher'=> $publisher
+                ),
+                array('%d', '%s', '%s', '%s')  
+            );
+        }
     }
 
-    if (isset($_POST['book_publisher'])) {
-        update_post_meta($post_id, '_book_publisher', sanitize_text_field($_POST['book_publisher']));
-    }
-
-    if (isset($_POST['book_year'])) {
-        update_post_meta($post_id, '_book_year', intval($_POST['book_year']));
-    }
-
-    if (isset($_POST['book_edition'])) {
-        update_post_meta($post_id, '_book_edition', sanitize_text_field($_POST['book_edition']));
-    }
-
-    if (isset($_POST['book_url'])) {
-        update_post_meta($post_id, '_book_url', esc_url_raw($_POST['book_url']));
-    }
+    return $post_id;
 }
